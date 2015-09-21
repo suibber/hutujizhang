@@ -5,6 +5,7 @@ namespace app\controllers;
 use Yii;
 use yii\web\Controller;
 use app\models\User;
+use app\models\Account;
 use app\WechatBaseController;
 
 class WechatController extends WechatBaseController{
@@ -39,8 +40,6 @@ class WechatController extends WechatBaseController{
                 $re_time        = time();                   // 返回时间
                 $re_msgType     = "text";                   // 返回消息类型
 
-                $userinfo       = $this->getUserInfoByOpenid($fromUsername);
-
                 // 返回消息模板
                 $re_textTpl     = "
                                 <xml>
@@ -53,10 +52,12 @@ class WechatController extends WechatBaseController{
                                 </xml>
                 "; 
 
+                $userinfo       = $this->getUserInfoByOpenid($fromUsername);
                 if( $msgtype == 'text' ){
-                    $re_contentStr = $userinfo->openid;
+                    $result = $this->saveAccount($userinfo->id, $keyword);
+                    $re_contentStr = $result['msg'];
                 }else{
-                    $re_contentStr = '444';
+                    $re_contentStr = "使用以下格式记账：\n吃饭，24";
                 }
                 $resultStr = sprintf($re_textTpl, $fromUsername, $toUsername, $re_time, $re_msgType, $re_contentStr);
                 echo $resultStr;
@@ -65,6 +66,40 @@ class WechatController extends WechatBaseController{
             exit;
         }
         
+    }
+
+    private function saveAccount($user_id, $origin_msg, $date = ''){
+        $date = $date ? $date : date("Y-m-d");
+        $comment = '';
+        $value = '';
+
+        $origin_msg = str_ireplace('，',',',htmlspecialchars(strip_tags(trim($origin_msg))));
+        $origin_msg = preg_replace('/\s/is',',',$origin_msg);
+        $explode = explode(',', $origin_msg);
+        if(count($explode) == 2){
+            list($comment, $value) = $explode;
+        }
+
+        if( is_numeric($value) ){
+            $account_model = new Account();
+            $account_model->user_id = $user_id;
+            $account_model->origin_msg = $origin_msg;
+            $account_model->date = $date;
+            $account_model->value = $value;
+            $account_model->comment = $comment;
+            $account_model->save();
+            $result = [
+                'success' => 0,
+                'msg' => '成功记录：'.$account_model->comment.'，'.$account_model->value,
+            ];
+        }else{
+            $result = [
+                'success' => 0,
+                'msg' => "格式有误，请使用：\n吃饭，24",
+            ];
+        }
+
+        return $result;
     }
 }
 ?>
