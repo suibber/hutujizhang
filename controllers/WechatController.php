@@ -88,18 +88,47 @@ class WechatController extends WechatBaseController{
             $account_model->value = $value;
             $account_model->comment = $comment;
             $account_model->save();
+            $month_stat = $this->getMonthStat($user_id);
             $result = [
-                'success' => 0,
-                'msg' => '成功记录：'.$account_model->comment.'，'.$account_model->value,
+                'success' => true,
+                'msg' => '成功记录：'.$account_model->comment.'，'.$account_model->value
+                    ."\r\n本月消费：".$month_stat['sum']
+                    ."\r\n本月日均：".$month_stat['average']
+                    ."\r\n回复“撤销”删除本次录入",
             ];
         }else{
-            $result = [
-                'success' => 0,
-                'msg' => "格式有误，请使用：\n吃饭，24",
-            ];
+            if( stripos('撤销',$origin_msg) !== false ){
+                $account_model = Account::find()
+                    ->where(['user_id'=>$user_id])
+                    ->orderBy(['id'=>SORT_DESC])
+                    ->one();
+                $account_model->delete();
+                $result = [
+                    'success' => true,
+                    'msg' => "已删除上一条记录",
+                ];
+            }else{
+                $result = [
+                    'success' => false,
+                    'msg' => "格式有误，请使用：\n吃饭，24",
+                ];
+            }
         }
 
         return $result;
+    }
+
+    public function getMonthStat($user_id){
+        $account_query = Account::find()
+            ->where(['user_id' => $user_id])
+            ->andWhere(['>=', 'date', date("Y-m-01")]);
+        $sum = round($account_query->sum('value'),2);
+        $month_days = intval(( strtotime(date("Y-m-d")) - strtotime(date("Y-m-01")) + 3600*24 ) / (3600*24));
+        $average = round($sum/$month_days,2);
+        return [
+            'sum' => $sum,
+            'average' => $average,
+        ];
     }
 }
 ?>
