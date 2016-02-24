@@ -7,6 +7,7 @@ use yii\web\Controller;
 use app\models\User;
 use app\models\Account;
 use app\WechatBaseController;
+use app\models\Plan;
 
 class WechatController extends WechatBaseController{
     public function actionTest(){
@@ -54,7 +55,7 @@ class WechatController extends WechatBaseController{
 
                 $userinfo       = $this->getUserInfoByOpenid($fromUsername);
                 if( $msgtype == 'text' ){
-                    $result = $this->saveAccount($userinfo->id, $keyword);
+                    $result = $this->saveAccount($userinfo->id, $keyword, $userinfo->openid);
                     $re_contentStr = $result['msg'];
                 }else{
                     $re_contentStr = "使用以下格式记账：\n吃饭，24";
@@ -68,7 +69,7 @@ class WechatController extends WechatBaseController{
         
     }
 
-    private function saveAccount($user_id, $origin_msg, $date = ''){
+    private function saveAccount($user_id, $origin_msg, $openid, $date = ''){
         $date = $date ? $date : date("Y-m-d");
         $comment = '';
         $value = '';
@@ -87,14 +88,20 @@ class WechatController extends WechatBaseController{
             $account_model->date = $date;
             $account_model->value = $value;
             $account_model->comment = $comment;
+            // 收支类型
+            $account_model->io_type = ($value >= 0) ? 
+                Account::IO_TYPE_EXPENDITURE : Account::IO_TYPE_INCOME;
             $account_model->save();
             $month_stat = $this->getMonthStat($user_id);
             $result = [
                 'success' => true,
-                'msg' => '成功记录：'.$account_model->comment.'，'.$account_model->value
+                'msg' => $account_model->comment.'：'.$account_model->value."元"
                     ."\r\n本月消费：".$month_stat['sum']
+                    ."\n计划 ".$month_stat['plan']." 的 ".round(($month_stat['sum']/$month_stat['plan'])*100,2)."%"
                     ."\r\n本月日均：".$month_stat['average']
-                    ."\r\n回复“撤销”删除本次录入",
+                    ."\n计划 ".round(($month_stat['plan']/30),2)
+                    ."\r\n回复“撤销”删除本次录入"
+                    ."\n<a href='".Yii::$app->params['baseUrl']."my/index?openid=".$openid."'>查看详情</a>",
             ];
         }else{
             if( stripos('撤销',$origin_msg) !== false ){
@@ -120,14 +127,17 @@ class WechatController extends WechatBaseController{
 
     public function getMonthStat($user_id){
         $account_query = Account::find()
-            ->where(['user_id' => $user_id])
+            ->where(['user_id' => $user_id, 'io_type' => Account::IO_TYPE_EXPENDITURE])
             ->andWhere(['>=', 'date', date("Y-m-01")]);
         $sum = round($account_query->sum('value'),2);
         $month_days = intval(( strtotime(date("Y-m-d")) - strtotime(date("Y-m-01")) + 3600*24 ) / (3600*24));
         $average = round($sum/$month_days,2);
+
+        $plan = Plan::findOne(['user_id' => $user_id]); 
         return [
             'sum' => $sum,
             'average' => $average,
+            'plan' => isset($plan->value)?intval($plan->value):5000,
         ];
     }
 }

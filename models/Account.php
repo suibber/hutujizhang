@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use app\BaseController;
 
 /**
  * This is the model class for table "{{%account}}".
@@ -20,6 +21,13 @@ use Yii;
  */
 class Account extends \yii\db\ActiveRecord
 {
+    public static $IO_TYPES = [
+        0 => '支出',
+        1 => '收入',
+    ];
+    const IO_TYPE_EXPENDITURE = 0;
+    const IO_TYPE_INCOME = 1;
+
     /**
      * @inheritdoc
      */
@@ -59,5 +67,56 @@ class Account extends \yii\db\ActiveRecord
             'ctime' => 'Ctime',
             'utime' => 'Utime',
         ];
+    }
+
+    public static function getMonthAccountAll($user_id)
+    {
+        $start_date = BaseController::getMonthFirstDate(time());
+        $end_date = BaseController::getMonthLastDate(time());
+        $datas = self::find()
+            ->where(['user_id' => $user_id, 'io_type' => self::IO_TYPE_EXPENDITURE])
+            ->andWhere(['>=', 'date', $start_date])
+            ->andWhere(['<=', 'date', $end_date])
+            ->sum('value');
+        return $datas;
+    }
+
+    public static function getMonthAccountList($user_id)
+    {
+        $start_date = BaseController::getMonthFirstDate(time());
+        $end_date = BaseController::getMonthLastDate(time());
+        $datas = self::find()
+            ->select("date, sum(value) value")
+            ->where(['user_id' => $user_id, 'io_type' => self::IO_TYPE_EXPENDITURE])
+            ->andWhere(['>=', 'date', $start_date])
+            ->andWhere(['<=', 'date', $end_date])
+            ->orderBy(['date' => SORT_DESC])
+            ->groupBy('date')
+            ->all();
+        return $datas;
+    }
+
+    public static function getMonthAccountIncomeAll($user_id)
+    {
+        $start_date = BaseController::getMonthFirstDate(time());
+        $end_date = BaseController::getMonthLastDate(time());
+        $datas = self::find()
+            ->where(['user_id' => $user_id, 'io_type' => self::IO_TYPE_INCOME])
+            ->andWhere(['>=', 'date', $start_date])
+            ->andWhere(['<=', 'date', $end_date])
+            ->sum('value');
+        return ($datas*-1);
+    }
+
+    public static function getWeekAccountAll($user_id)
+    {
+        $start_date = BaseController::getWeekFirstDate(time());
+        $end_date = BaseController::getWeekLastDate(time());
+        $datas = self::find()
+            ->where(['user_id' => $user_id])
+            ->andWhere(['>=', 'date', $start_date])
+            ->andWhere(['<=', 'date', $end_date])
+            ->sum('value');
+        return $datas;
     }
 }

@@ -43,6 +43,12 @@ $config = [
             'showScriptName' => false,
             'enablePrettyUrl' => true,
         ],
+        'thrift' => [
+            'class' => 'yii\thrift\Thrift',
+            'serviceMap' => [
+                '' => 'service'
+            ]
+        ],
     ],
     'params' => $params,
 ];
