@@ -55,6 +55,12 @@ class Plan extends \yii\db\ActiveRecord
     public static function getMonthPlan( $user_id )
     {
         $plan = self::findOne(['user_id' => $user_id]);
+        if (!$plan) {
+            $plan = new Plan();
+            $plan->user_id = $user_id;
+            $plan->value = 5000;
+            $plan->save();
+        }
         return $plan->value;
     }
 }

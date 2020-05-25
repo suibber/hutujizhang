@@ -1,0 +1,5 @@
+{
+    "require": {
+        "leric/php-thrift": "^0.9.1"
+    }
+}

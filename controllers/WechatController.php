@@ -29,38 +29,40 @@ class WechatController extends WechatBaseController{
 
         if (!empty($postStr)){
                 libxml_disable_entity_loader(true);
-                $postObj        = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+                $postObj        = simplexml_load_string($postStr, 
+                    'SimpleXMLElement', LIBXML_NOCDATA);
                 $fromUsername   = $postObj->FromUserName;   // 微信用户ID
                 $toUsername     = $postObj->ToUserName;     // 开发者账号
                 $keyword        = trim($postObj->Content);  // 用户输入信息
                 $time           = $postObj->CreateTime;     // 请求时间
                 $msgtype        = $postObj->MsgType;        // 请求类型
-                $event          = $postObj->Event ? $postObj->Event : '';   // 事件类型
-
+                $event          = $postObj->Event ? $postObj->Event : '';// 事件类型
                 $re_contentStr  = '';                       // 返回消息
                 $re_time        = time();                   // 返回时间
                 $re_msgType     = "text";                   // 返回消息类型
 
                 // 返回消息模板
                 $re_textTpl     = "
-                                <xml>
-                                <ToUserName><![CDATA[%s]]></ToUserName>
-                                <FromUserName><![CDATA[%s]]></FromUserName>
-                                <CreateTime>%s</CreateTime>
-                                <MsgType><![CDATA[%s]]></MsgType>
-                                <Content><![CDATA[%s]]></Content>
-                                <FuncFlag>0</FuncFlag>
-                                </xml>
+                    <xml>
+                    <ToUserName><![CDATA[%s]]></ToUserName>
+                    <FromUserName><![CDATA[%s]]></FromUserName>
+                    <CreateTime>%s</CreateTime>
+                    <MsgType><![CDATA[%s]]></MsgType>
+                    <Content><![CDATA[%s]]></Content>
+                    <FuncFlag>0</FuncFlag>
+                    </xml>
                 "; 
 
                 $userinfo       = $this->getUserInfoByOpenid($fromUsername);
                 if( $msgtype == 'text' ){
-                    $result = $this->saveAccount($userinfo->id, $keyword, $userinfo->openid);
+                    $result = $this->saveAccount($userinfo->id, $keyword, 
+                        $userinfo->openid);
                     $re_contentStr = $result['msg'];
                 }else{
                     $re_contentStr = "使用以下格式记账：\n吃饭，24";
                 }
-                $resultStr = sprintf($re_textTpl, $fromUsername, $toUsername, $re_time, $re_msgType, $re_contentStr);
+                $resultStr = sprintf($re_textTpl, $fromUsername, $toUsername, 
+                    $re_time, $re_msgType, $re_contentStr);
                 echo $resultStr;
         }else {
             echo "access denied";
@@ -74,7 +76,8 @@ class WechatController extends WechatBaseController{
         $comment = '';
         $value = '';
 
-        $origin_msg = str_ireplace('，',',',htmlspecialchars(strip_tags(trim($origin_msg))));
+        $origin_msg = str_ireplace('，', ',' 
+            ,htmlspecialchars(strip_tags(trim($origin_msg))));
         $origin_msg = preg_replace('/\s/is',',',$origin_msg);
         $explode = explode(',', $origin_msg);
         if(count($explode) == 2){
@@ -95,13 +98,16 @@ class WechatController extends WechatBaseController{
             $month_stat = $this->getMonthStat($user_id);
             $result = [
                 'success' => true,
-                'msg' => $account_model->comment.'：'.$account_model->value."元"
+                'msg' => $account_model->comment.'：'.$account_model->value
+                    ."元 已入账"
                     ."\r\n本月消费：".$month_stat['sum']
-                    ."\n计划 ".$month_stat['plan']." 的 ".round(($month_stat['sum']/$month_stat['plan'])*100,2)."%"
+                    ."\n计划 ".$month_stat['plan']." 的 "
+                    .round(($month_stat['sum']/$month_stat['plan'])*100,2)."%"
                     ."\r\n本月日均：".$month_stat['average']
                     ."\n计划 ".round(($month_stat['plan']/30),2)
-                    ."\r\n回复“撤销”删除本次录入"
-                    ."\n<a href='".Yii::$app->params['baseUrl']."my/index?openid=".$openid."'>查看详情</a>",
+                    ."\r\n回“撤销”删除本次录入"
+                    ."\n<a href='".Yii::$app->params['baseUrl']
+                    ."my/index?openid=".$openid."'>查看详情</a>",
             ];
         }else{
             if( stripos('撤销',$origin_msg) !== false ){
@@ -127,17 +133,18 @@ class WechatController extends WechatBaseController{
 
     public function getMonthStat($user_id){
         $account_query = Account::find()
-            ->where(['user_id' => $user_id, 'io_type' => Account::IO_TYPE_EXPENDITURE])
+            ->where(['user_id' => $user_id])
             ->andWhere(['>=', 'date', date("Y-m-01")]);
         $sum = round($account_query->sum('value'),2);
-        $month_days = intval(( strtotime(date("Y-m-d")) - strtotime(date("Y-m-01")) + 3600*24 ) / (3600*24));
+        $month_days = intval(( strtotime(date("Y-m-d")) - strtotime(date("Y-m-01")) 
+            + 3600*24 ) / (3600*24));
         $average = round($sum/$month_days,2);
 
         $plan = Plan::findOne(['user_id' => $user_id]); 
         return [
             'sum' => $sum,
             'average' => $average,
-            'plan' => isset($plan->value)?intval($plan->value):5000,
+            'plan' => $plan->value,
         ];
     }
 }

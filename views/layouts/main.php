@@ -10,6 +10,7 @@ use yii\widgets\Breadcrumbs;
 use app\assets\AppAsset;
 
 AppAsset::register($this);
+$this->title = "糊涂记账";
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
@@ -28,7 +29,7 @@ AppAsset::register($this);
     <?php
     NavBar::begin([
         'brandLabel' => '糊涂记账',
-        'brandUrl' => Yii::$app->homeUrl,
+        'brandUrl' => '/my/index',
         'options' => [
             'class' => 'navbar-inverse navbar-fixed-top',
         ],
@@ -36,16 +37,9 @@ AppAsset::register($this);
     echo Nav::widget([
         'options' => ['class' => 'navbar-nav navbar-right'],
         'items' => [
-            ['label' => 'Home', 'url' => ['/site/index']],
-            ['label' => 'About', 'url' => ['/site/about']],
-            ['label' => 'Contact', 'url' => ['/site/contact']],
-            Yii::$app->user->isGuest ?
-                ['label' => 'Login', 'url' => ['/site/login']] :
-                [
-                    'label' => 'Logout (' . Yii::$app->user->identity->username . ')',
-                    'url' => ['/site/logout'],
-                    'linkOptions' => ['data-method' => 'post']
-                ],
+            ['label' => '首页', 'url' => ['/my/index']],
+            ['label' => '账单', 'url' => ['#']],
+            ['label' => '设置', 'url' => ['/set']],
         ],
     ]);
     NavBar::end();
